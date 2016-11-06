@@ -1,0 +1,36 @@
+
+
+
+import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.object.stock.db.DataBase;
+import com.object.stock.db.SqlString;
+import com.object.stock.jvhe.JvHeApiToDb;
+
+
+public class StockGetData {
+	
+	public static List<String> shAllStock = new ArrayList<String>();
+	
+	public static void main(String[] args){
+		try {
+			getAllStock();
+//			JvHeApiToDb.shData("601009");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	
+	public static void getAllStock() throws Exception{
+			ResultSet rs = DataBase.executeQuery(SqlString.allShStock);
+			while(DataBase.next(rs)){
+				shAllStock.add(rs.getString(1));
+				System.out.println(rs.getString(1));
+			}
+			DataBase.close(rs);
+	}
+	
+}

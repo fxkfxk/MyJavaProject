@@ -1,0 +1,45 @@
+import java.util.Date;
+import java.util.Timer;
+import java.util.TimerTask;
+
+import com.object.stock.juhe.shall.JuHeShallMain;
+import com.object.stock.jvhe.JvHeHsMain;
+import com.object.stock.jvhe.JvHeShCheckStockStatusThread;
+
+
+
+
+public class StockGetData {
+
+	private static Timer openTimer = null;
+
+	public static void main(String[] args) {
+		if(openTimer!=null)//定时任务已启动
+			return;
+		
+		// 程序启动时获取数据(考虑在开盘时候数据断开然后在闭盘时启动也获取最新数据，避免遗漏、检测程序)
+		JvHeHsMain.start();
+//		JuHeShallMain.start();
+		
+		// 每隔10分钟判断当前是否开盘时间，不是开盘时间关闭线程列表，是开盘时间启动线程列表
+		openTimer = new Timer();
+		openTimer.schedule(new TimerTask() {
+			@Override
+			public void run() {
+				Date dd = new Date();
+				if (
+						((dd.getHours() >= 9 && dd.getHours() < 11)||(dd.getHours() == 11 && dd.getMinutes()<=40)) // 上午开盘时间
+					||  ((dd.getHours() >= 13 && dd.getHours() < 15)||(dd.getHours() == 15 && dd.getMinutes()<=10)) // 下午开盘时间
+						) {
+					JvHeHsMain.start();
+					JuHeShallMain.start();
+				}else{
+					JvHeHsMain.stop();
+					JuHeShallMain.stop();
+				}
+			}
+		}, 3 * 60 * 1000, 10 * 60 * 1000);
+	}
+
+
+}

@@ -1,0 +1,76 @@
+package com.object.stock.juhe.shall;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import com.object.stock.db.DataBase;
+import com.object.stock.db.SqlString;
+
+public class ShallRenWu implements Runnable {
+
+	public static int totalCount = 1;
+
+	private int page = 0;
+
+	public ShallRenWu(int pageIndex) {
+		page = pageIndex;
+	}
+
+	@Override
+	public void run() {
+		// TODO 自动生成的方法存根
+		String ss = null;
+		try {
+			ss = JuHeShallApi.getShall(page);
+//			System.out.println(ss);
+//			System.out.println(page);
+			JSONObject jo = new JSONObject(ss);
+			String error_code = jo.getString("error_code");
+			if ("10014".equals(error_code)) {
+				System.out.print("重试一次  page:" + page + "  " + ss);
+				ss = JuHeShallApi.getShall(page);
+				jo = new JSONObject(ss);
+				error_code = jo.getString("resultcode");
+				if (!"0".equals(error_code)) {
+					System.out.print("重试失败  page:" + page + "  " + ss);
+				}
+			}
+			if (!"0".equals(error_code)) {
+				System.out.print("访问错误 page:" + page + "  " + ss);
+				return;
+			}
+			JSONObject result = jo.getJSONObject("result");
+			JSONArray data = result.getJSONArray("data");
+			totalCount = result.getInt("totalCount");
+			String ddStr = null;
+			JSONObject stockObj = null;
+			String gid = null;
+			Object[] params = null;
+			for (int i = 0; i < data.length(); i++) {
+				try {
+					stockObj = data.getJSONObject(i);
+					gid = stockObj.getString("code");
+					ddStr = JuHeShallMain.getDate() + " " + stockObj.getString("ticktime");
+//					System.out.println(ddStr);
+					if (ddStr.equals(JuHeShallMain.getShGidDateTime(gid))) {// 防止插入重复数据
+						break;
+					}
+					JuHeShallMain.setShGidDateTime(gid, ddStr);
+					stockObj.put("datetime", ddStr);
+					System.out.println(stockObj.toString());
+					params = new Object[] { gid, stockObj.getString("name"), stockObj.getString("trade"), stockObj.getString("pricechange"), stockObj.getString("changepercent"),
+							stockObj.getString("buy"), stockObj.getString("sell"), stockObj.getString("settlement"), stockObj.getString("open"), stockObj.getString("high"),
+							stockObj.getString("low"), stockObj.getString("volume"), stockObj.getString("amount"), stockObj.getString("ticktime")};
+					DataBase.executeUpdate(SqlString.insertShallHisSql, params);
+					Thread.sleep(50);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+//			System.out.println("shall完成 page:"+page);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+}
